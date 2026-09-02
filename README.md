@@ -6,12 +6,17 @@ Programming projects for UC Berkeley's CS 180: Introduction to Computer Vision a
 
 ```text
 .
-├── css/styles.css   # Shared visual system
-├── index.html       # Portfolio landing page
-└── project0/        # Add each project as its own directory over time
+├── css/styles.css       # Landing-page styles
+├── index.html           # Portfolio landing page
+└── project0/
+    ├── images/          # Project 0 images and animation
+    ├── index.html       # Project 0 write-up
+    └── styles.css       # Project 0 styles
 ```
 
 Future project pages should live in `project0/` through `project4/` and `final/`, each with its own `index.html`. Use relative paths so the site works at `zszeto.github.io/cs180/`.
+
+Project 0 lives in `project0/`; its publishable images are stored in `project0/images/`.
 
 ## Run locally
 

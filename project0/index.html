@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Becoming Friends with Your Camera — Project 0 for UC Berkeley CS 180.">
+    <meta name="theme-color" content="#f4f0e7">
+    <meta property="og:title" content="Becoming Friends with Your Camera · Zach Szeto">
+    <meta property="og:description" content="An exploration of perspective, camera distance, and focal length for CS 180.">
+    <meta property="og:type" content="article">
+    <title>Project 0 · Becoming Friends with Your Camera</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <nav aria-label="Project navigation">
+        <a href="../">← All projects</a>
+        <a href="https://cal-cs180.github.io/fa26/hw/proj0/" target="_blank" rel="noopener noreferrer">Assignment ↗</a>
+      </nav>
+    </header>
+
+    <main>
+      <header class="hero">
+        <p class="eyebrow">CS 180 · Project 0</p>
+        <h1>Becoming Friends with Your Camera</h1>
+      </header>
+
+      <section class="project-section" id="part-1">
+        <div class="section-content">
+          <h2>Selfie: The Wrong Way vs. The Right Way</h2>
+
+          <p class="sequence-note">From left to right: 0.5×, 1×, 2×, and 5×.</p>
+
+          <div class="photo-grid" aria-label="Portraits taken from increasing distances and zoom levels">
+            <figure>
+              <img src="./images/portrait-05x.jpg" alt="Close-up portrait photographed with the 0.5 times ultrawide lens" width="1350" height="1800">
+            </figure>
+            <figure>
+              <img src="./images/portrait-1x.jpg" alt="Portrait photographed from farther away with the 1 times lens" width="1350" height="1800" loading="lazy">
+            </figure>
+            <figure>
+              <img src="./images/portrait-2x.jpg" alt="Portrait photographed from farther away with the 2 times lens" width="1350" height="1800" loading="lazy">
+            </figure>
+            <figure>
+              <img src="./images/portrait-5x.jpg" alt="Portrait photographed from the farthest position with the 5 times telephoto lens" width="1350" height="1800" loading="lazy">
+            </figure>
+          </div>
+
+          <div class="observation">
+            <p>In the close-up photo, my face looks distorted because the camera is so close. As I move farther away and zoom in, my face looks flatter and more natural. The change in perspective comes from moving the camera, while zoom keeps my face about the same size.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="project-section" id="part-2">
+        <div class="section-content">
+          <h2>Architectural Perspective Compression</h2>
+
+          <div class="comparison-grid">
+            <figure>
+              <img src="./images/hilgard-2x.jpg" alt="Hilgard Hall photographed from far away at 2 times zoom" width="1800" height="2400" loading="lazy">
+              <figcaption>2× · far away</figcaption>
+            </figure>
+            <figure>
+              <img src="./images/hilgard-1x.jpg" alt="Hilgard Hall photographed from a medium distance at 1 times zoom" width="1800" height="2400" loading="lazy">
+              <figcaption>1× · medium distance</figcaption>
+            </figure>
+            <figure>
+              <img src="./images/hilgard-05x.jpg" alt="Hilgard Hall photographed from nearby at 0.5 times zoom" width="1800" height="2400" loading="lazy">
+              <figcaption>0.5× · close up</figcaption>
+            </figure>
+          </div>
+
+          <div class="observation">
+            <p>I took these photos of Hilgard Hall while walking closer and zooming out. The 2× photo looks flatter, while the 0.5× photo makes the front of the building and the stairs stand out more. Moving closer makes the depth of the scene more noticeable.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="project-section" id="part-3">
+        <div class="section-content">
+          <h2>The Dolly Zoom</h2>
+
+          <figure class="dolly-figure">
+            <img src="./images/teddy-bear-dolly-zoom.gif" alt="Dolly zoom animation of a teddy bear sitting on a table" width="480" height="640" loading="lazy">
+            <figcaption>Teddy bear dolly zoom</figcaption>
+          </figure>
+
+          <div class="observation">
+            <p>I moved backward while zooming in so the teddy bear stayed about the same size in every photo. The bear stays in place, but everything around it seems to unwarp. Putting the photos together creates the dolly zoom effect.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>© 2026 Zach Szeto</span>
+      <a href="../">CS 180 portfolio</a>
+    </footer>
+  </body>
+</html>
