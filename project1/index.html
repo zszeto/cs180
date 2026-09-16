@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Colorizing the Prokudin-Gorskii photo collection with single-scale alignment and image pyramids.">
+    <meta name="theme-color" content="#f4f0e7">
+    <meta property="og:title" content="Images of the Russian Empire · Zach Szeto">
+    <meta property="og:description" content="Project 1 for UC Berkeley CS 180.">
+    <meta property="og:type" content="article">
+    <title>Project 1 · Images of the Russian Empire</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <nav aria-label="Project navigation">
+        <a href="../">← All projects</a>
+        <a href="https://cal-cs180.github.io/fa26/hw/proj1/" target="_blank" rel="noopener noreferrer">Assignment ↗</a>
+      </nav>
+    </header>
+
+    <main>
+      <header class="hero">
+        <p class="eyebrow">CS 180 · Project 1</p>
+        <h1>Images of the Russian Empire</h1>
+        <p class="lede">The goal of this project was to reconstruct color photographs from Sergei Prokudin-Gorskii's <a href="https://www.loc.gov/collections/prokudin-gorskii/?st=grid" target="_blank" rel="noopener noreferrer">digitized glass plate collection</a> from the early 1900s. Each scan contains three grayscale exposures taken through blue, green, and red filters, stacked vertically in BGR order.</p>
+      </header>
+
+      <section class="project-section" id="single-scale">
+        <div class="text-column">
+          <h2>Single-Scale Alignment</h2>
+          <p>The first approach I took to aligning the images was an exhaustive search over possible displacements within a [-15, 15] pixel window. I shifted the red and green channels relative to the blue channel, then scored each displacement using the L2 norm and normalized cross-correlation (NCC).</p>
+
+          <div class="metric">
+            <h3>L2 distance</h3>
+            <code>L2(A, B) = sqrt(sum((A - B)^2))</code>
+            <p>A smaller L2 distance represents a better match. In my implementation, I negate the value so both metrics can use the same maximization procedure.</p>
+          </div>
+
+          <div class="metric">
+            <h3>Normalized cross-correlation</h3>
+            <code>NCC(A, B) = ((A - mean(A)) · (B - mean(B))) / (||A - mean(A)|| ||B - mean(B)||)</code>
+            <p>A larger NCC score represents a better match. Normalizing the images makes NCC less sensitive to overall brightness differences between the color channels.</p>
+          </div>
+
+          <h3>Ignoring the Borders</h3>
+          <p>The borders of the glass plate had a large impact on the scores even though they were not part of the actual image. To reduce this effect, I computed the alignment score using only the centered 80% of each image. This crop was used only for comparison, with the final output still using the complete image.</p>
+        </div>
+      </section>
+
+      <section class="project-section" id="single-results">
+        <h2>Single-Scale Results</h2>
+        <p class="section-note">Offsets are listed as (dy, dx). Green and red were aligned relative to blue. L2 norm was used for the images without the border crop (NCC was not tested). L2 and NCC produced identical results with the center crop.</p>
+
+        <div class="result-set">
+          <h3>No Border Crop</h3>
+          <div class="three-grid">
+            <figure><img src="./images/single/l2-no-crop-cathedral.jpg" alt="Cathedral reconstructed with L2 alignment without border cropping" width="390" height="341" loading="lazy"><figcaption><strong>Cathedral</strong><span>G: (1, -1) · R: (7, -1)</span></figcaption></figure>
+            <figure><img src="./images/single/l2-no-crop-monastery.jpg" alt="Monastery reconstructed with L2 alignment without border cropping" width="391" height="341" loading="lazy"><figcaption><strong>Monastery</strong><span>G: (-6, 0) · R: (9, 1)</span></figcaption></figure>
+            <figure><img src="./images/single/l2-no-crop-tobolsk.jpg" alt="Tobolsk reconstructed with L2 alignment without border cropping" width="396" height="341" loading="lazy"><figcaption><strong>Tobolsk</strong><span>G: (3, 2) · R: (6, 3)</span></figcaption></figure>
+          </div>
+        </div>
+
+        <div class="result-set">
+          <h3>Center Crop</h3>
+          <div class="three-grid">
+            <figure><img src="./images/single/ncc-crop-cathedral.jpg" alt="Cathedral reconstructed with NCC alignment and border cropping" width="390" height="341" loading="lazy"><figcaption><strong>Cathedral</strong><span>G: (5, 2) · R: (12, 3)</span></figcaption></figure>
+            <figure><img src="./images/single/ncc-crop-monastery.jpg" alt="Monastery reconstructed with NCC alignment and border cropping" width="391" height="341" loading="lazy"><figcaption><strong>Monastery</strong><span>G: (-3, 2) · R: (3, 2)</span></figcaption></figure>
+            <figure><img src="./images/single/ncc-crop-tobolsk.jpg" alt="Tobolsk reconstructed with NCC alignment and border cropping" width="396" height="341" loading="lazy"><figcaption><strong>Tobolsk</strong><span>G: (3, 3) · R: (6, 3)</span></figcaption></figure>
+          </div>
+        </div>
+      </section>
+
+      <section class="project-section" id="pyramid">
+        <div class="text-column">
+          <h2>Multi-Scale Image Pyramid</h2>
+          <p>An exhaustive search works with small jpeg images, but becomes much more expensive for full resolution TIF files. The images are much larger, so some of the channels need to be displaced by well over 100 pixels. Searching the entire possible displacement range directly at full resolution would require evaluating far too many candidate alignments.</p>
+          <p>To make this more efficient, I implemented a recursive image pyramid. I repeatedly downsample both channels by a factor of two until the image is small enough to align efficiently. I first estimate the displacement at the coarsest resolution. Then, when I scale to the next resolution, I double the displacement because every pixel at the smaller scale corresponds to approximately two pixels at the larger scale. I then perform another search around that estimate to further refine the alignment. This process repeats until reaching the original resolution, allowing for large full-resolution displacements to be estimated using relatively small searches at each scale.</p>
+        </div>
+      </section>
+
+      <section class="project-section" id="pyramid-results">
+        <h2>Pyramid Results</h2>
+        <p class="section-note">Offsets are listed as (dy, dx). Green and red were aligned relative to blue. NCC was used as the distance function.</p>
+
+        <div class="gallery">
+          <figure><img src="./images/pyramid/cathedral.jpg" alt="Colorized photograph of a cathedral" width="390" height="341" loading="lazy"><figcaption><strong>Cathedral</strong><span>G: (5, 2) · R: (12, 3)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/church.jpg" alt="Colorized photograph of a church beside water" width="1200" height="1058" loading="lazy"><figcaption><strong>Church</strong><span>G: (25, 4) · R: (58, -4)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/emir.jpg" alt="Misaligned color reconstruction of the Emir of Bukhara" width="1200" height="1040" loading="lazy"><figcaption><strong>Emir</strong><span>G: (49, 24) · R: (141, -205)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/harvesters.jpg" alt="Colorized photograph of harvesters" width="1200" height="1048" loading="lazy"><figcaption><strong>Harvesters</strong><span>G: (60, 17) · R: (124, 14)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/icon.jpg" alt="Colorized photograph of a religious icon" width="1200" height="1040" loading="lazy"><figcaption><strong>Icon</strong><span>G: (41, 17) · R: (89, 23)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/ilemselga.jpg" alt="Colorized photograph of a landscape near Ilemselga" width="1200" height="1032" loading="lazy"><figcaption><strong>Ilemselga</strong><span>G: (40, 7) · R: (130, 11)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/melons.jpg" alt="Colorized photograph of a person with melons" width="1200" height="1032" loading="lazy"><figcaption><strong>Melons</strong><span>G: (82, 11) · R: (178, 13)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/monastery.jpg" alt="Colorized photograph of a monastery" width="391" height="341" loading="lazy"><figcaption><strong>Monastery</strong><span>G: (-3, 2) · R: (3, 2)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/religious-painting.jpg" alt="Colorized photograph of a religious painting" width="1200" height="1024" loading="lazy"><figcaption><strong>Religious Painting</strong><span>G: (27, 3) · R: (68, 7)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/self_portrait.jpg" alt="Colorized self-portrait of Sergei Prokudin-Gorskii" width="1200" height="1024" loading="lazy"><figcaption><strong>Self Portrait</strong><span>G: (79, 29) · R: (176, 37)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/siren.jpg" alt="Colorized photograph titled Siren" width="1200" height="1022" loading="lazy"><figcaption><strong>Siren</strong><span>G: (49, -6) · R: (96, -25)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/three_generations.jpg" alt="Colorized photograph of three generations of people" width="1200" height="1036" loading="lazy"><figcaption><strong>Three Generations</strong><span>G: (53, 14) · R: (111, 11)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/tobolsk.jpg" alt="Colorized photograph of Tobolsk" width="396" height="341" loading="lazy"><figcaption><strong>Tobolsk</strong><span>G: (3, 3) · R: (6, 3)</span></figcaption></figure>
+          <figure><img src="./images/pyramid/wharf.jpg" alt="Colorized photograph of a wharf" width="1200" height="1036" loading="lazy"><figcaption><strong>Wharf</strong><span>G: (15, -7) · R: (83, -16)</span></figcaption></figure>
+        </div>
+      </section>
+
+      <section class="project-section" id="additional-examples">
+        <h2>Additional Examples</h2>
+        <p class="section-note">Three more images from the <a href="https://www.loc.gov/collections/prokudin-gorskii/?st=grid" target="_blank" rel="noopener noreferrer">Prokudin-Gorskii collection</a>. Offsets are listed as (dy, dx).</p>
+
+        <div class="three-grid additional-grid">
+          <figure>
+            <img src="./images/other/train.jpg" alt="Colorized photograph of a steam train" width="1200" height="1038" loading="lazy">
+            <figcaption><strong><a href="https://www.loc.gov/item/2018679302/" target="_blank" rel="noopener noreferrer">Train ↗</a></strong><span>G: (43, 6) · R: (87, 32)</span></figcaption>
+          </figure>
+          <figure>
+            <img src="./images/other/items.jpg" alt="Colorized photograph of a display of historical items" width="1200" height="1030" loading="lazy">
+            <figcaption><strong><a href="https://www.loc.gov/item/2018680010/" target="_blank" rel="noopener noreferrer">Items ↗</a></strong><span>G: (67, 2) · R: (133, -7)</span></figcaption>
+          </figure>
+          <figure>
+            <img src="./images/other/camel.jpg" alt="Colorized photograph of a person standing beside a loaded camel" width="1200" height="1040" loading="lazy">
+            <figcaption><strong><a href="https://www.loc.gov/item/2018681180/" target="_blank" rel="noopener noreferrer">Camel ↗</a></strong><span>G: (19, 15) · R: (80, 38)</span></figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="project-section" id="failure-case">
+        <div class="text-column">
+          <h2>Failure Case: Emir of Bukhara</h2>
+          <p>The Emir image was the only one that did not align correctly when the red and green channels were aligned relative to blue. Parts of the image, especially the robe, have very different intensities across the three channels, so the raw NCC and L2 scores did not correspond to the correct geometric alignment.</p>
+          <p>To fix this, I aligned the red and blue channels relative to green. The red and green channels were more similar in this image, which produced a much better result.</p>
+        </div>
+
+        <div class="emir-grid">
+          <figure><img src="./images/emir/color-plate.jpg" alt="Three vertically stacked grayscale exposures of the Emir of Bukhara" width="246" height="640" loading="lazy"><figcaption><strong>Original glass plate</strong></figcaption></figure>
+          <figure><img src="./images/emir/aligned-to-blue.jpg" alt="Emir reconstruction with channels incorrectly aligned to blue" width="1200" height="1040" loading="lazy"><figcaption><strong>Aligned to blue</strong><span>Misaligned result</span></figcaption></figure>
+          <figure><img src="./images/emir/aligned-to-green.jpg" alt="Emir reconstruction corrected by aligning blue and red to green" width="1200" height="1040" loading="lazy"><figcaption><strong>Aligned to green</strong><span>B: (-49, -24) · R: (57, 17)</span></figcaption></figure>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>© 2026 Zach Szeto</span>
+      <a href="../">CS 180 portfolio</a>
+    </footer>
+  </body>
+</html>

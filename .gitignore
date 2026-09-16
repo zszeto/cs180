@@ -33,6 +33,10 @@ build/
 .cache/
 coverage/
 
+# Large source images (publish optimized JPEG/PNG versions instead)
+*.tif
+*.tiff
+
 # Environment files and secrets
 .env
 .env.*
