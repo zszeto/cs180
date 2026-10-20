@@ -37,6 +37,14 @@ coverage/
 *.tif
 *.tiff
 
+# Model checkpoints and training output (publish result images only)
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+runs/
+wandb/
+
 # Environment files and secrets
 .env
 .env.*
