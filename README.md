@@ -20,11 +20,16 @@ Programming projects for UC Berkeley's CS 180: Introduction to Computer Vision a
 │   ├── images/          # Project 2 inputs and filtering results
 │   ├── index.html       # Project 2 write-up
 │   └── styles.css       # Project 2 styles
-└── project3/
-    ├── images/a/       # Pretrained flow model results
-    ├── images/b/       # MNIST denoising and flow matching results
-    ├── index.html      # Both Parts A and B of Project 3
-    └── styles.css      # Project 3 screen and print styles
+├── project3/
+│   ├── images/a/       # Pretrained flow model results
+│   ├── images/b/       # MNIST denoising and flow matching results
+│   ├── index.html      # Both Parts A and B of Project 3
+│   └── styles.css      # Project 3 screen and print styles
+└── project4/
+    ├── data/a/         # Full-precision homography matrices
+    ├── images/a/       # Source photos, correspondences, and warped results
+    ├── index.html      # Part A; Part B will be added on the same page
+    └── styles.css      # Project 4 screen and print styles
 ```
 
 Future project pages should live in `project0/` through `project4/` and `final/`, each with its own `index.html`. Use relative paths so the site works at `zszeto.github.io/cs180/`.

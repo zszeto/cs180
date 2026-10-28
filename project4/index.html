@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Zach Szeto's CS 180 Project 4: recovering homographies, image rectification, inverse warping, and blended photo mosaics.">
+    <meta name="theme-color" content="#f4f0e7">
+    <meta property="og:title" content="(Auto)stitching Photo Mosaics · Zach Szeto">
+    <meta property="og:description" content="Part A: Image Warping and Mosaicing, for UC Berkeley CS 180.">
+    <meta property="og:type" content="article">
+    <title>Project 4 · (Auto)stitching Photo Mosaics</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="site-header">
+      <nav aria-label="Project navigation">
+        <a href="../">← All projects</a>
+        <a href="https://cal-cs180.github.io/fa26/hw/proj3/index.html">Assignment ↗</a>
+      </nav>
+    </header>
+    <main id="content">
+      <header class="hero">
+        <p class="eyebrow">CS 180 · Project 4</p>
+        <h1>(Auto)stitching Photo Mosaics</h1>
+        <p class="lede">The goal of this project was to combine overlapping photographs into panoramas. In Part A, I selected matching points by hand, recovered the homographies between images, and implemented inverse warping with nearest-neighbor and bilinear interpolation. I then used feathering to blend the aligned images into mosaics.</p>
+        <nav class="contents" aria-label="Page sections">
+          <a href="#a-photos">A.1 · Photos</a>
+          <a href="#a-homographies">A.2 · Homographies</a>
+          <a href="#a-warping">A.3 · Warping and Rectification</a>
+          <a href="#a-mosaics">A.4 · Mosaics</a>
+        </nav>
+      </header>
+      <section class="part-heading" id="part-a" aria-labelledby="part-a-title">
+        <p class="eyebrow">Part A</p>
+        <h2 id="part-a-title">Image Warping and Mosaicing</h2>
+      </section>
+      <section class="project-section" id="a-photos" aria-labelledby="a-photos-title">
+        <p class="eyebrow">Part A · A.1</p>
+        <h3 id="a-photos-title">Shoot the Pictures</h3>
+        <p>I took three pairs of overlapping photos, rotating the camera from roughly the same position between shots. Each pair shows a wider view of the scene when combined. I used the roof, courtyard, and building sets below, with the left image mapped into the right image’s coordinate system.</p>
+        <h4>Roof</h4>
+        <div class="image-pair">
+          <figure>
+            <a href="./images/a/inputs/mosaic/roof_left.jpeg" aria-label="Open full-size: Left source photograph for the roof mosaic"><img src="./images/a/inputs/mosaic/roof_left.jpeg" alt="Left source photograph for the roof mosaic" width="1280" height="960" loading="lazy" decoding="async"></a>
+            <figcaption>Roof · left source image</figcaption>
+          </figure>
+          <figure>
+            <a href="./images/a/inputs/mosaic/roof_right.jpeg" aria-label="Open full-size: Right source photograph for the roof mosaic"><img src="./images/a/inputs/mosaic/roof_right.jpeg" alt="Right source photograph for the roof mosaic" width="1280" height="960" loading="lazy" decoding="async"></a>
+            <figcaption>Roof · right source image</figcaption>
+          </figure>
+        </div>
+        <h4>Courtyard</h4>
+        <div class="image-pair">
+          <figure>
+            <a href="./images/a/inputs/mosaic/courtyard_left.jpeg" aria-label="Open full-size: Left source photograph for the courtyard mosaic"><img src="./images/a/inputs/mosaic/courtyard_left.jpeg" alt="Left source photograph for the courtyard mosaic" width="1280" height="960" loading="lazy" decoding="async"></a>
+            <figcaption>Courtyard · left source image</figcaption>
+          </figure>
+          <figure>
+            <a href="./images/a/inputs/mosaic/courtyard_right.jpeg" aria-label="Open full-size: Right source photograph for the courtyard mosaic"><img src="./images/a/inputs/mosaic/courtyard_right.jpeg" alt="Right source photograph for the courtyard mosaic" width="1280" height="960" loading="lazy" decoding="async"></a>
+            <figcaption>Courtyard · right source image</figcaption>
+          </figure>
+        </div>
+        <h4>Building</h4>
+        <div class="image-pair">
+          <figure>
+            <a href="./images/a/inputs/mosaic/building_left.jpeg" aria-label="Open full-size: Left source photograph for the building mosaic"><img src="./images/a/inputs/mosaic/building_left.jpeg" alt="Left source photograph for the building mosaic" width="1280" height="960" loading="lazy" decoding="async"></a>
+            <figcaption>Building · left source image</figcaption>
+          </figure>
+          <figure>
+            <a href="./images/a/inputs/mosaic/building_right.jpeg" aria-label="Open full-size: Right source photograph for the building mosaic"><img src="./images/a/inputs/mosaic/building_right.jpeg" alt="Right source photograph for the building mosaic" width="1280" height="960" loading="lazy" decoding="async"></a>
+            <figcaption>Building · right source image</figcaption>
+          </figure>
+        </div>
+      </section>
+      <section class="project-section" id="a-homographies" aria-labelledby="a-homographies-title">
+        <p class="eyebrow">Part A · A.2</p>
+        <h3 id="a-homographies-title">Recover Homographies</h3>
+        <p>I manually selected matching points in the overlapping parts of each pair. A homography maps the coordinates in the left image to coordinates in the right image. The matrix has eight unknowns once the bottom-right entry is fixed to 1.</p>
+        <div class="math-scroll" tabindex="0" role="region" aria-label="Homography mapping">
+          <div class="math-expression">
+            <span class="math-label">s *</span><span class="matrix-brackets ">
+              <table class="matrix" aria-label="Destination point in homogeneous coordinates">
+                <tbody>
+                  <tr>
+                    <td>u</td>
+                  </tr>
+                  <tr>
+                    <td>v</td>
+                  </tr>
+                  <tr>
+                    <td>1</td>
+                  </tr>
+                </tbody>
+              </table>
+            </span><span class="math-label">=</span><span class="matrix-brackets ">
+              <table class="matrix" aria-label="Homography matrix">
+                <tbody>
+                  <tr>
+                    <td>h_11</td><td>h_12</td><td>h_13</td>
+                  </tr>
+                  <tr>
+                    <td>h_21</td><td>h_22</td><td>h_23</td>
+                  </tr>
+                  <tr>
+                    <td>h_31</td><td>h_32</td><td>1</td>
+                  </tr>
+                </tbody>
+              </table>
+            </span><span class="matrix-brackets ">
+              <table class="matrix" aria-label="Source point in homogeneous coordinates">
+                <tbody>
+                  <tr>
+                    <td>x</td>
+                  </tr>
+                  <tr>
+                    <td>y</td>
+                  </tr>
+                  <tr>
+                    <td>1</td>
+                  </tr>
+                </tbody>
+              </table>
+            </span>
+          </div>
+        </div>
+        <p>The scale s accounts for homogeneous coordinates. After multiplying by H, I divide the first two coordinates by the third. Rearranging the mapping gives two linear equations for each matched point (x, y) to (u, v):</p>
+        <div class="math-scroll" tabindex="0" role="region" aria-label="Coefficient matrix and right-hand side for one correspondence">
+          <div class="math-expression">
+            <span class="math-label">A_i =</span><span class="matrix-brackets symbolic">
+              <table class="matrix" aria-label="Two coefficient rows contributed by one point correspondence">
+                <tbody>
+                  <tr>
+                    <td>x</td><td>y</td><td>1</td><td>0</td><td>0</td><td>0</td><td>-u*x</td><td>-u*y</td>
+                  </tr>
+                  <tr>
+                    <td>0</td><td>0</td><td>0</td><td>x</td><td>y</td><td>1</td><td>-v*x</td><td>-v*y</td>
+                  </tr>
+                </tbody>
+              </table>
+            </span><span class="math-label">b_i =</span><span class="matrix-brackets ">
+              <table class="matrix" aria-label="Destination coordinate column">
+                <tbody>
+                  <tr>
+                    <td>u</td>
+                  </tr>
+                  <tr>
+                    <td>v</td>
+                  </tr>
+                </tbody>
+              </table>
+            </span>
+          </div>
+        </div>
+        <div class="math-scroll" tabindex="0" role="region" aria-label="Homography parameter vector">
+          <div class="math-expression">
+            <span class="math-label">h =</span><span class="matrix-brackets symbolic">
+              <table class="matrix" aria-label="Eight homography parameters as a transposed row vector">
+                <tbody>
+                  <tr>
+                    <td>h_11</td><td>h_12</td><td>h_13</td><td>h_21</td><td>h_22</td><td>h_23</td><td>h_31</td><td>h_32</td>
+                  </tr>
+                </tbody>
+              </table>
+            </span><span class="math-label">^T</span>
+          </div>
+        </div>
+        <p>I stacked the equations for all the points into A h = b and solved the overdetermined system using np.linalg.lstsq in computeH. Using more than four matches reduces the effect of small errors in the clicked points.</p>
+        <p>Matching numbers in each figure identify the same location in the two images. The matrices below map left to right and are rounded for display; the linked text files contain the full-precision values.</p>
+        <h4>Roof · 20 Point Pairs</h4>
+        <figure class="wide-figure">
+          <a href="./images/a/results/roof_points.png" aria-label="Open full-size: Numbered point correspondences between the two roof photographs"><img src="./images/a/results/roof_points.png" alt="Numbered point correspondences between the two roof photographs" width="950" height="337" loading="lazy" decoding="async"></a>
+          <figcaption>20 manually selected correspondences, with matching point numbers.</figcaption>
+        </figure>
+        <div class="math-scroll recovered-matrix" tabindex="0" role="region" aria-label="Recovered roof homography">
+          <div class="math-expression">
+            <span class="math-label">H_roof =</span><span class="matrix-brackets ">
+              <table class="matrix" aria-label="Roof recovered homography">
+                <tbody>
+                  <tr>
+                    <td>2.0062</td><td>0.0050</td><td>-930.6873</td>
+                  </tr>
+                  <tr>
+                    <td>0.3705</td><td>1.7335</td><td>-390.6055</td>
+                  </tr>
+                  <tr>
+                    <td>0.00075565</td><td>0.00009184</td><td>1</td>
+                  </tr>
+                </tbody>
+              </table>
+            </span>
+          </div>
+        </div>
+        <p class="data-link"><a href="./data/a/roof-homography.txt">Full-precision roof matrix</a></p>
+        <h4>Courtyard · 23 Point Pairs</h4>
+        <figure class="wide-figure">
+          <a href="./images/a/results/courtyard_points.png" aria-label="Open full-size: Numbered point correspondences between the two courtyard photographs"><img src="./images/a/results/courtyard_points.png" alt="Numbered point correspondences between the two courtyard photographs" width="950" height="337" loading="lazy" decoding="async"></a>
+          <figcaption>23 manually selected correspondences, with matching point numbers.</figcaption>
+        </figure>
+        <div class="math-scroll recovered-matrix" tabindex="0" role="region" aria-label="Recovered courtyard homography">
+          <div class="math-expression">
+            <span class="math-label">H_courtyard =</span><span class="matrix-brackets ">
+              <table class="matrix" aria-label="Courtyard recovered homography">
+                <tbody>
+                  <tr>
+                    <td>2.1468</td><td>-0.0089</td><td>-1142.4286</td>
+                  </tr>
+                  <tr>
+                    <td>0.4265</td><td>1.7705</td><td>-379.6019</td>
+                  </tr>
+                  <tr>
+                    <td>0.00089390</td><td>-0.00001780</td><td>1</td>
+                  </tr>
+                </tbody>
+              </table>
+            </span>
+          </div>
+        </div>
+        <p class="data-link"><a href="./data/a/courtyard-homography.txt">Full-precision courtyard matrix</a></p>
+        <h4>Building · 19 Point Pairs</h4>
+        <figure class="wide-figure">
+          <a href="./images/a/results/building_points.png" aria-label="Open full-size: Numbered point correspondences between the two building photographs"><img src="./images/a/results/building_points.png" alt="Numbered point correspondences between the two building photographs" width="950" height="337" loading="lazy" decoding="async"></a>
+          <figcaption>19 manually selected correspondences, with matching point numbers.</figcaption>
+        </figure>
+        <div class="math-scroll recovered-matrix" tabindex="0" role="region" aria-label="Recovered building homography">
+          <div class="math-expression">
+            <span class="math-label">H_building =</span><span class="matrix-brackets ">
+              <table class="matrix" aria-label="Building recovered homography">
+                <tbody>
+                  <tr>
+                    <td>1.6156</td><td>0.0060</td><td>-604.6969</td>
+                  </tr>
+                  <tr>
+                    <td>0.2196</td><td>1.3871</td><td>-172.9000</td>
+                  </tr>
+                  <tr>
+                    <td>0.00046312</td><td>0.00001472</td><td>1</td>
+                  </tr>
+                </tbody>
+              </table>
+            </span>
+          </div>
+        </div>
+        <p class="data-link"><a href="./data/a/building-homography.txt">Full-precision building matrix</a></p>
+      </section>
+      <section class="project-section" id="a-warping" aria-labelledby="a-warping-title">
+        <p class="eyebrow">Part A · A.3</p>
+        <h3 id="a-warping-title">Warp the Images</h3>
+        <p>I implemented warpImageNearestNeighbor and warpImageBilinear using inverse warping. For each pixel in the output canvas, I apply the inverse homography, divide by the homogeneous coordinate, and sample the source image. This fills valid output locations directly rather than leaving gaps between forward-mapped pixels.</p>
+        <div class="math-scroll" tabindex="0" role="region" aria-label="Inverse mapping equation">
+          <div class="math-expression">
+            <span class="math-label">p_source = H_inverse * p_destination</span>
+          </div>
+        </div>
+        <p>Nearest neighbor rounds the source coordinates to the closest pixel. Bilinear interpolation combines the four neighboring pixels using their fractional distances. Locations outside the source image remain black.</p>
+        <p>For rectification, I selected the four corners of a rectangular object in each photo and mapped them to the corners of an upright rectangle. The black areas in the results are outside the transformed image, and the surrounding scene is kept visible.</p>
+        <h4>Ramen</h4>
+        <p>I selected the glass pane inside the restaurant door and mapped its corners to a 180 x 600 rectangle. The aspect ratio is an estimate of the pane’s shape, rather than a measured physical dimension.</p>
+        <div class="image-pair rectification-inputs">
+          <figure>
+            <a href="./images/a/inputs/rectification/ramen.jpeg" aria-label="Open full-size: Original ramen photograph before rectification"><img src="./images/a/inputs/rectification/ramen.jpeg" alt="Original ramen photograph before rectification" width="960" height="1280" loading="lazy" decoding="async"></a>
+            <figcaption>Original photograph</figcaption>
+          </figure>
+          <figure>
+            <a href="./images/a/results/rectification/ramen_points.png" aria-label="Open full-size: Four numbered corners selected for the ramen rectification"><img src="./images/a/results/rectification/ramen_points.png" alt="Four numbered corners selected for the ramen rectification" width="297" height="389" loading="lazy" decoding="async"></a>
+            <figcaption>Selected corners · top left, top right, bottom right, bottom left</figcaption>
+          </figure>
+        </div>
+        <div class="image-pair rectification-results">
+          <figure>
+            <a href="./images/a/results/rectification/ramen_nearest.png" aria-label="Open full-size: Full-scene ramen rectification using nearest-neighbor interpolation"><img src="./images/a/results/rectification/ramen_nearest.png" alt="Full-scene ramen rectification using nearest-neighbor interpolation" width="855" height="1602" loading="lazy" decoding="async"></a>
+            <figcaption>Nearest neighbor · 8.102 s</figcaption>
+          </figure>
+          <figure>
+            <a href="./images/a/results/rectification/ramen_bilinear.png" aria-label="Open full-size: Full-scene ramen rectification using bilinear interpolation"><img src="./images/a/results/rectification/ramen_bilinear.png" alt="Full-scene ramen rectification using bilinear interpolation" width="855" height="1602" loading="lazy" decoding="async"></a>
+            <figcaption>Bilinear interpolation · 11.577 s</figcaption>
+          </figure>
+        </div>
+        <p>The selected pane becomes upright, while the rest of the storefront changes perspective around it. The output includes the full finite warped frame. Nearest neighbor has more visible stepping along fine edges, while bilinear interpolation gives smoother transitions.</p>
+        <h4>Osaka</h4>
+        <p>I selected the rectangular runner billboard and mapped it to a 300 x 600 rectangle, again using an estimated aspect ratio.</p>
+        <div class="image-pair rectification-inputs">
+          <figure>
+            <a href="./images/a/inputs/rectification/osaka.jpeg" aria-label="Open full-size: Original osaka photograph before rectification"><img src="./images/a/inputs/rectification/osaka.jpeg" alt="Original osaka photograph before rectification" width="960" height="1280" loading="lazy" decoding="async"></a>
+            <figcaption>Original photograph</figcaption>
+          </figure>
+          <figure>
+            <a href="./images/a/results/rectification/osaka_points.png" aria-label="Open full-size: Four numbered corners selected for the osaka rectification"><img src="./images/a/results/rectification/osaka_points.png" alt="Four numbered corners selected for the osaka rectification" width="297" height="389" loading="lazy" decoding="async"></a>
+            <figcaption>Selected corners · top left, top right, bottom right, bottom left</figcaption>
+          </figure>
+        </div>
+        <div class="image-pair rectification-results">
+          <figure>
+            <a href="./images/a/results/rectification/osaka_nearest.png" aria-label="Open full-size: Full-scene osaka rectification using nearest-neighbor interpolation"><img src="./images/a/results/rectification/osaka_nearest.png" alt="Full-scene osaka rectification using nearest-neighbor interpolation" width="1601" height="1373" loading="lazy" decoding="async"></a>
+            <figcaption>Nearest neighbor · 12.582 s</figcaption>
+          </figure>
+          <figure>
+            <a href="./images/a/results/rectification/osaka_bilinear.png" aria-label="Open full-size: Full-scene osaka rectification using bilinear interpolation"><img src="./images/a/results/rectification/osaka_bilinear.png" alt="Full-scene osaka rectification using bilinear interpolation" width="1601" height="1373" loading="lazy" decoding="async"></a>
+            <figcaption>Bilinear interpolation · 19.372 s</figcaption>
+          </figure>
+        </div>
+        <p>The billboard becomes front-facing, while parts of the surrounding buildings stretch more strongly. In this case, the homography sends a line within the source photo toward infinity, so I used a bounded output region. The result shows the sign and nearby scene rather than the entire original frame.</p>
+        <h4>Interpolation Quality and Processing Time</h4>
+        <div class="table-wrap">
+          <table class="timing-table">
+            <caption>Rectification processing time</caption>
+            <thead>
+              <tr>
+                <th scope="col">Example</th><th scope="col">Nearest neighbor</th><th scope="col">Bilinear</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Ramen</th><td>8.102 s</td><td>11.577 s</td>
+              </tr>
+              <tr>
+                <th scope="row">Osaka</th><td>12.582 s</td><td>19.372 s</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Nearest neighbor was faster for both examples. It only selects one pixel, while bilinear interpolation computes a weighted average of four pixels. Bilinear took longer, but reduced the jagged appearance of edges. Neither method can recover details that were not captured in the original photo.</p>
+      </section>
+      <section class="project-section" id="a-mosaics" aria-labelledby="a-mosaics-title">
+        <p class="eyebrow">Part A · A.4</p>
+        <h3 id="a-mosaics-title">Blend the Images into a Mosaic</h3>
+        <p>I kept the right image as the reference and warped the left image into the same coordinate system. I first calculated a canvas large enough for both images, then warped each image and its weights onto that canvas.</p>
+        <p>To avoid a hard boundary in the overlap, I gave pixels larger weights farther from the source-image edges. I combined the images using the weighted average below. This is simple feathering, with the weights determining which parts of each image contribute.</p>
+        <div class="math-scroll" tabindex="0" role="region" aria-label="Distance-to-edge feathering weight">
+          <div class="math-expression">
+            <span class="math-label">weight(x, y) = min(x + 1, width - x, y + 1, height - y)</span>
+          </div>
+        </div>
+        <div class="math-scroll" tabindex="0" role="region" aria-label="Weighted mosaic blending">
+          <div class="math-expression">
+            <span class="math-label">mosaic = (weight_1 * image_1 + weight_2 * image_2) / (weight_1 + weight_2)</span>
+          </div>
+        </div>
+        <p>Pixels covered by only one image keep that image’s color. Locations with no coverage remain black. The weights determine coverage, so black pixels within a source photo are still treated as valid image content.</p>
+        <h4>Roof</h4>
+        <div class="image-pair mosaic-sources">
+          <figure>
+            <a href="./images/a/inputs/mosaic/roof_left.jpeg" aria-label="Open full-size: Left source photograph for the roof mosaic"><img src="./images/a/inputs/mosaic/roof_left.jpeg" alt="Left source photograph for the roof mosaic" width="1280" height="960" loading="lazy" decoding="async"></a>
+            <figcaption>Roof · left source image</figcaption>
+          </figure>
+          <figure>
+            <a href="./images/a/inputs/mosaic/roof_right.jpeg" aria-label="Open full-size: Right source photograph for the roof mosaic"><img src="./images/a/inputs/mosaic/roof_right.jpeg" alt="Right source photograph for the roof mosaic" width="1280" height="960" loading="lazy" decoding="async"></a>
+            <figcaption>Roof · right source image</figcaption>
+          </figure>
+        </div>
+        <figure class="wide-figure">
+          <a href="./images/a/results/roof_bilinear.png" aria-label="Open full-size: Feathered roof photo mosaic using bilinear interpolation"><img src="./images/a/results/roof_bilinear.png" alt="Feathered roof photo mosaic using bilinear interpolation" width="2211" height="1561" loading="lazy" decoding="async"></a>
+          <figcaption>Roof mosaic · bilinear interpolation and feathering. <a href="./images/a/results/roof_nearest.png">View nearest-neighbor mosaic</a>.</figcaption>
+        </figure>
+        <p>The mosaic extends the view across the rooftops and includes the Campanile in the distance. The roof edges provide useful landmarks for aligning the two images.</p>
+        <h4>Courtyard</h4>
+        <div class="image-pair mosaic-sources">
+          <figure>
+            <a href="./images/a/inputs/mosaic/courtyard_left.jpeg" aria-label="Open full-size: Left source photograph for the courtyard mosaic"><img src="./images/a/inputs/mosaic/courtyard_left.jpeg" alt="Left source photograph for the courtyard mosaic" width="1280" height="960" loading="lazy" decoding="async"></a>
+            <figcaption>Courtyard · left source image</figcaption>
+          </figure>
+          <figure>
+            <a href="./images/a/inputs/mosaic/courtyard_right.jpeg" aria-label="Open full-size: Right source photograph for the courtyard mosaic"><img src="./images/a/inputs/mosaic/courtyard_right.jpeg" alt="Right source photograph for the courtyard mosaic" width="1280" height="960" loading="lazy" decoding="async"></a>
+            <figcaption>Courtyard · right source image</figcaption>
+          </figure>
+        </div>
+        <figure class="wide-figure">
+          <a href="./images/a/results/courtyard_bilinear.png" aria-label="Open full-size: Feathered courtyard photo mosaic using bilinear interpolation"><img src="./images/a/results/courtyard_bilinear.png" alt="Feathered courtyard photo mosaic using bilinear interpolation" width="2451" height="1723" loading="lazy" decoding="async"></a>
+          <figcaption>Courtyard mosaic · bilinear interpolation and feathering. <a href="./images/a/results/courtyard_nearest.png">View nearest-neighbor mosaic</a>.</figcaption>
+        </figure>
+        <p>The mosaic joins the covered courtyard into a wider view. Repeated roof lines and columns make alignment errors easier to spot, and the feathering softens the boundary between the images.</p>
+        <h4>Building</h4>
+        <div class="image-pair mosaic-sources">
+          <figure>
+            <a href="./images/a/inputs/mosaic/building_left.jpeg" aria-label="Open full-size: Left source photograph for the building mosaic"><img src="./images/a/inputs/mosaic/building_left.jpeg" alt="Left source photograph for the building mosaic" width="1280" height="960" loading="lazy" decoding="async"></a>
+            <figcaption>Building · left source image</figcaption>
+          </figure>
+          <figure>
+            <a href="./images/a/inputs/mosaic/building_right.jpeg" aria-label="Open full-size: Right source photograph for the building mosaic"><img src="./images/a/inputs/mosaic/building_right.jpeg" alt="Right source photograph for the building mosaic" width="1280" height="960" loading="lazy" decoding="async"></a>
+            <figcaption>Building · right source image</figcaption>
+          </figure>
+        </div>
+        <figure class="wide-figure">
+          <a href="./images/a/results/building_bilinear.png" aria-label="Open full-size: Feathered building photo mosaic using bilinear interpolation"><img src="./images/a/results/building_bilinear.png" alt="Feathered building photo mosaic using bilinear interpolation" width="1885" height="1316" loading="lazy" decoding="async"></a>
+          <figcaption>Building mosaic · bilinear interpolation and feathering. <a href="./images/a/results/building_nearest.png">View nearest-neighbor mosaic</a>.</figcaption>
+        </figure>
+        <p>The two building facades combine into a wider view of the courtyard. The windows and rooflines continue across the overlap, while the foreground bench and trees make small local differences more noticeable.</p>
+        <h4>Mosaic Processing Times</h4>
+        <div class="table-wrap">
+          <table class="timing-table">
+            <caption>Mosaic processing time</caption>
+            <thead>
+              <tr>
+                <th scope="col">Example</th><th scope="col">Nearest neighbor</th><th scope="col">Bilinear</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Roof</th><td>78.026 s</td><td>103.788 s</td>
+              </tr>
+              <tr>
+                <th scope="row">Courtyard</th><td>95.978 s</td><td>122.801 s</td>
+              </tr>
+              <tr>
+                <th scope="row">Building</th><td>57.202 s</td><td>83.945 s</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Nearest neighbor was faster for all three mosaics, while bilinear interpolation gave smoother resampling. These measurements cover the full make_mosaic call, including canvas setup, weight generation, image and weight warps, and blending. Image loading, plotting, and saving are excluded.</p>
+        <p>Feathering reduces the appearance of a seam, but it does not correct geometric misalignment. The point matches and recovered homography still determine how well the structures line up.</p>
+      </section>
+      <section class="part-pending" id="part-b" aria-label="Part B status">
+        <p>Part B coming soon.</p>
+      </section>
+    </main>
+    <footer>
+      <span>© 2026 Zach Szeto</span><a href="../">CS 180 portfolio</a><a href="#content">Back to top ↑</a>
+    </footer>
+  </body>
+</html>
